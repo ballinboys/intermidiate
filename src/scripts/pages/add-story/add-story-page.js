@@ -4,6 +4,8 @@ import AddStoryPresenter from "../../presenters/add-story-presenter";
 import AuthPresenter from "../../presenters/auth-presenter";
 import { sendStoryToServer } from "../../data/api";
 import Database from "../../database";
+import marker from "/images/marker-icon.png";
+import shadow from "/images/marker-shadow.png";
 export default class AddStoryPage {
   constructor() {
     this._presenter = new AddStoryPresenter(this);
@@ -60,9 +62,20 @@ export default class AddStoryPage {
   _initMap() {
     this._map = L.map("storyMap").setView([-2.5489, 118.0149], 5);
     this._coordinates = { lat: -2.5489, lon: 118.0149 };
+
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap contributors",
     }).addTo(this._map);
+
+    // definisikan custom icon
+    const customIcon = L.icon({
+      iconUrl: marker,
+      iconShadow: shadow,
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
 
     this._map.on("click", (e) => {
       const { lat, lng } = e.latlng;
@@ -73,7 +86,11 @@ export default class AddStoryPage {
       if (this._marker) {
         this._map.removeLayer(this._marker);
       }
-      this._marker = L.marker([lat, lng]).addTo(this._map);
+
+      // pakai customIcon
+      this._marker = L.marker([lat, lng], { icon: customIcon }).addTo(
+        this._map
+      );
       this._coordinates = { lat, lon: lng };
     });
   }
