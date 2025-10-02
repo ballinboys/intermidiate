@@ -3,6 +3,8 @@ import L from "leaflet";
 import DetailPresenter from "../../presenters/detail-presenter";
 import AuthPresenter from "../../presenters/auth-presenter";
 import { showFormattedDate } from "../../utils";
+import markerIcon from "/images/marker-icon.png";
+import markerShadow from "/images/marker-shadow.png";
 
 export default class DetailPage {
   constructor() {
@@ -65,25 +67,31 @@ export default class DetailPage {
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap contributors",
     }).addTo(map);
+    const customIcon = L.icon({
+      iconUrl: markerIcon,
+      shadowUrl: markerShadow,
+      iconSize: [25, 41], // ukuran icon
+      iconAnchor: [12, 41], // titik anchor (bawah icon)
+      popupAnchor: [1, -34], // posisi popup relatif
+      shadowSize: [41, 41], // ukuran shadow
+    });
 
-    L.marker([this._story.lat, this._story.lon]).addTo(map).bindPopup(`
-        <div class="map-popup">
-          <h3>${this._story.name}</h3>
-          <img src="${
-            this._story.photoUrl
-          }" alt="Story photo" class="popup-img">
-          <p class="popup-desc">${this._story.description}</p>
-          <div class="popup-meta">
-            <span class="popup-date">${showFormattedDate(
-              this._story.createdAt
-            )}</span>
-            <span class="popup-coords">
-              Lat: ${this._story.lat.toFixed(
-                4
-              )}, Lng: ${this._story.lon.toFixed(4)}
-            </span>
-          </div>
-        </div>
-      `);
+    L.marker([this._story.lat, this._story.lon], { icon: customIcon }).addTo(
+      map
+    ).bindPopup(`
+    <div class="map-popup">
+      <h3>${this._story.name}</h3>
+      <img src="${this._story.photoUrl}" alt="Story photo" class="popup-img">
+      <p class="popup-desc">${this._story.description}</p>
+      <div class="popup-meta">
+        <span class="popup-date">${showFormattedDate(
+          this._story.createdAt
+        )}</span>
+        <span class="popup-coords">
+          Lat: ${this._story.lat.toFixed(4)}, Lng: ${this._story.lon.toFixed(4)}
+        </span>
+      </div>
+    </div>
+  `);
   }
 }
