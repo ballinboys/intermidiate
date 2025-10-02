@@ -61,6 +61,17 @@ const Database = {
   async getAllStories() {
     return (await dbPromise).getAll(OBJECT_STORE_NAME);
   },
+  async searchStories(keyword) {
+    const stories = await this.getAllStories();
+    if (!keyword) return stories;
+
+    const lowerKeyword = keyword.toLowerCase();
+    return stories.filter(
+      (story) =>
+        story.name?.toLowerCase().includes(lowerKeyword) ||
+        story.description?.toLowerCase().includes(lowerKeyword)
+    );
+  },
 
   async removeStory(id) {
     return (await dbPromise).delete(OBJECT_STORE_NAME, id);

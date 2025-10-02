@@ -85,6 +85,36 @@ export default class HomePresenter {
     //   }
     // }
   }
+  async searchStories(query) {
+    try {
+      const { listStory } = await getStories(); // bisa juga dari IndexedDB
+      const filtered = listStory.filter(
+        (story) =>
+          story.name?.toLowerCase().includes(query.toLowerCase()) ||
+          story.description?.toLowerCase().includes(query.toLowerCase())
+      );
+
+      // kasih field lengkap + like status
+      const storiesWithLikes = await Promise.all(
+        filtered.map(async (story) => {
+          const dbStory = await this._db.getStoryById(story.id);
+          return {
+            ...story,
+            liked: dbStory?.liked || false,
+            photoUrl: story.photoUrl || "/images/no-image.png",
+            createdAt: story.createdAt || new Date().toISOString(),
+            description: story.description || "Tidak ada deskripsi",
+            name: story.name || "Anonim",
+          };
+        })
+      );
+
+      return storiesWithLikes;
+    } catch (error) {
+      console.error("Search failed:", error);
+      return [];
+    }
+  }
 
   async toggleLike(storyId) {
     try {

@@ -12,18 +12,40 @@ export default class HomePage {
 
   async render() {
     return `
-      <section class="container">
-        <a href="#stories" class="skip-link" tabindex="1">Skip to content</a>
-        <div id="stories" tabindex="-1"></div>
-      </section>
-    `;
+    <section class="container">
+      <a href="#stories" class="skip-link" tabindex="1">Skip to content</a>
+
+      <h2>Search by Creator Name</h2>
+      <div id="stories" tabindex="-1"></div>
+    </section>
+  `;
   }
 
   async afterRender() {
     this._storiesContainer = document.getElementById("stories");
     this._presenter.loadStories();
 
-    // Skip link handling
+    // Search bar
+    const searchContainer = document.createElement("div");
+    searchContainer.innerHTML = `
+    <input type="text" id="searchInput" placeholder="Cari cerita..." />
+    <button id="searchBtn">Search</button>
+  `;
+    this._storiesContainer.parentNode.insertBefore(
+      searchContainer,
+      this._storiesContainer
+    );
+
+    document.getElementById("searchBtn").addEventListener("click", async () => {
+      const query = document.getElementById("searchInput").value.trim();
+      if (query) {
+        const results = await this._presenter.searchStories(query);
+        this.showStories(results);
+      } else {
+        // kalau kosong → tampilkan semua story
+        this._presenter.loadStories();
+      }
+    });
     const skipLink = document.querySelector(".skip-link");
     skipLink.addEventListener("click", (e) => {
       e.preventDefault();
@@ -47,16 +69,20 @@ export default class HomePage {
           (story) => `
         <div class="story-item" role="listitem">
           <figure class="story-image">
-            <img src="${story.photoUrl}" 
-                 alt="Photo story by ${story.name}" 
-                 loading="lazy">
+            <img src="${
+              story.photoUrl || "/images/no-image.png"
+            }" alt="Photo story by ${story.name || "Anonim"}" loading="lazy">
           </figure>
           <div class="story-info">
-            <h3 class="story-heading">${story.name}</h3>
+            <h3 class="story-heading">${story.name || "Anonim"}</h3>
             <div class="story-meta">
-              <time datetime="${story.createdAt}">${showFormattedDate(
-            story.createdAt
-          )}</time>
+              <time datetime="${story.createdAt || ""}">
+                ${
+                  story.createdAt
+                    ? showFormattedDate(story.createdAt)
+                    : "Tanggal tidak diketahui"
+                }
+              </time>
               <span id="location-${story.id}">
                 <img src="/assets/loading.png" alt="loading" style="width:16px;height:16px;vertical-align:middle;">
                 Memuat lokasi...
@@ -67,7 +93,9 @@ export default class HomePage {
                 ${story.liked ? "❤️" : "🤍"}
               </button>
             </div>
-            <p class="story-desc">${story.description}</p>
+            <p class="story-desc">${
+              story.description || "Tidak ada deskripsi"
+            }</p>
             <p class="story-reporter">Dilaporkan oleh: ${
               story.name || "Anonim"
             }</p>

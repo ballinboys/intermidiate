@@ -21,10 +21,7 @@ export default class AddStoryPage {
       <section class="story-form-wrapper">
       <h2>Share Your Story</h2>
       <form id="newStoryForm">
-        <div class="input-section">
-          <label for="storyName">Your Name</label>
-          <input type="text" id="storyName" required>
-        </div>
+
         <div class="input-section">
           <label for="storyDesc">Story Details</label>
           <textarea id="storyDesc" required></textarea>
