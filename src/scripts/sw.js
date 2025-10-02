@@ -48,12 +48,26 @@ registerRoute(
 
 // Push notification
 self.addEventListener("push", (event) => {
-  event.waitUntil(
-    (async () => {
-      const data = event.data.json();
-      await self.registration.showNotification(data.title, {
-        body: data.options.body,
-      });
-    })()
-  );
+  const data = event.data?.json() || {
+    title: "Default",
+    options: {
+      body: "No content",
+      icon: "/icons/icon-192x192.png",
+      actions: [
+        { action: "open_detail", title: "Lihat Detail" },
+        { action: "dismiss", title: "Tutup" },
+      ],
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, data.options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  if (event.action === "open_detail") {
+    event.waitUntil(clients.openWindow("/#/detail-page"));
+  } else {
+    event.waitUntil(clients.openWindow("/"));
+  }
 });

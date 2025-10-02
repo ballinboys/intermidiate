@@ -43,4 +43,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   setupLogout();
+
+  let deferredPrompt;
+  const installBtn = document.getElementById("installBtn");
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    if (installBtn) {
+      installBtn.style.display = "block"; // munculin tombol install
+
+      installBtn.addEventListener("click", async () => {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+
+        if (outcome === "accepted") {
+          console.log("✅ User terima install");
+          installBtn.style.display = "none"; // tombol ilang permanen
+        } else {
+          console.log("❌ User batal install");
+          installBtn.style.display = "block"; // tombol muncul lagi
+        }
+
+        deferredPrompt = null;
+      });
+    }
+  });
 });
