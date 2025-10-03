@@ -6,6 +6,7 @@ import "../styles/story-cards.css";
 import "../styles/add-story.css";
 import "../styles/detail.css";
 import "../styles/home.css";
+import "../styles/offline.css";
 
 import { registerSW } from "virtual:pwa-register";
 

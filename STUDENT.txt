@@ -1,2 +1,2 @@
-APP_URL=https://682639a8e07da3974f6b6698--strong-unicorn-50c85e.netlify.app
+APP_URL=https://stately-rugelach-a0c323.netlify.app/
 MAP_SERVICE_API_KEY=<api_key>

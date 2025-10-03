@@ -10,16 +10,36 @@ import CONFIG from "./config";
 
 console.log("Service worker module loaded");
 
-// ✅ Hanya ini saja untuk precache
+// ✅ precache semua file hasil build
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Routing untuk API non-image
+// ✅ Cache untuk file static lokal (ikon marker, shadow, css, dll)
+registerRoute(
+  ({ request }) =>
+    request.destination === "style" ||
+    request.destination === "script" ||
+    request.destination === "worker" ||
+    request.destination === "image", // termasuk marker-icon.png
+  new CacheFirst({
+    cacheName: "static-assets",
+  })
+);
+// cache openstreetmap
+registerRoute(
+  ({ request }) =>
+    request.destination === "image" && request.url.includes("/images/"),
+  new CacheFirst({
+    cacheName: "static-images",
+  })
+);
+// ✅ Cache API non-image (misal JSON, halaman HTML dynamic)
 registerRoute(
   ({ request, url }) =>
     url.origin === self.location.origin && request.destination !== "image",
   new NetworkFirst({ cacheName: "mystory-api" })
 );
 
+// ✅ Cache API image dari BASE_URL (foto story)
 registerRoute(
   ({ request, url }) => {
     const baseUrl = new URL(CONFIG.BASE_URL);
@@ -30,15 +50,17 @@ registerRoute(
   })
 );
 
+// ✅ Cache Map tiles (OpenStreetMap / MapTiler)
 registerRoute(
-  ({ url }) => {
-    return url.origin.includes("maptiler");
-  },
+  ({ url }) =>
+    url.origin.includes("maptiler") ||
+    url.origin.includes("tile.openstreetmap.org"),
   new CacheFirst({
-    cacheName: "maptiler-api",
+    cacheName: "map-tiles",
   })
 );
 
+// ✅ Cache untuk API Dicoding
 registerRoute(
   ({ url }) => url.origin === "https://story-api.dicoding.dev",
   new NetworkFirst({
@@ -46,7 +68,7 @@ registerRoute(
   })
 );
 
-// Push notification
+// ✅ Push notification
 self.addEventListener("push", (event) => {
   const data = event.data?.json() || {
     title: "Default",

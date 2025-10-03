@@ -94,6 +94,7 @@ export async function postStory({ description, photo, lat, lon }) {
 
   return await fetchResponse.json();
 }
+
 export async function subscribePushNotification({
   endpoint,
   keys: { p256dh, auth },

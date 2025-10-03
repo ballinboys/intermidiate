@@ -271,3 +271,26 @@ body:not(.logged-in) .nav-login {
 .skip-link:focus {
   top: 0;
 }
+
+/* Tombol Install App */
+#installBtn {
+  background-color: #ff7b00;
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  display: none; /* default hidden */
+}
+
+#installBtn:hover {
+  background-color: #e56f00;
+}
+
+#installBtn:active {
+  transform: scale(0.95);
+}

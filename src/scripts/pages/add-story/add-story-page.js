@@ -97,10 +97,13 @@ export default class AddStoryPage {
     const galleryBtn = document.getElementById("openGallery");
     const photoInput = document.getElementById("photoUpload");
     const photoPreview = document.getElementById("photoContainer");
+
+    // Pilih dari galeri
     galleryBtn.addEventListener("click", () => {
       photoInput.click();
     });
 
+    // Kamera
     takePhotoBtn.addEventListener("click", async () => {
       try {
         if (this._stream) {
@@ -113,13 +116,13 @@ export default class AddStoryPage {
         });
 
         photoPreview.innerHTML = `
-          <div class="camera-preview">
-            <video id="cameraPreview" autoplay playsinline></video>
-            <button type="button" id="captureBtn" class="capture-btn">
-              <i class="capture-icon"></i>
-            </button>
-          </div>
-        `;
+        <div class="camera-preview">
+          <video id="cameraPreview" autoplay playsinline></video>
+          <button type="button" id="captureBtn" class="capture-btn">
+            <i class="capture-icon"></i>
+          </button>
+        </div>
+      `;
 
         const video = document.getElementById("cameraPreview");
         video.srcObject = this._stream;
@@ -140,18 +143,16 @@ export default class AddStoryPage {
                 return;
               }
 
-              this._photoFile = blob;
-              this._photoUrl = URL.createObjectURL(blob);
-
-              const photoFile = new File([blob], "captured-photo.jpg", {
+              // langsung bikin File yang valid
+              this._photoFile = new File([blob], "captured-photo.jpg", {
                 type: "image/jpeg",
                 lastModified: Date.now(),
               });
 
-              this._photoUrl = photoFile;
-              photoPreview.innerHTML = `<img src="${URL.createObjectURL(
-                blob
-              )}" alt="Preview" style="max-width: 100%">`;
+              // bikin preview dari File
+              this._photoUrl = URL.createObjectURL(this._photoFile);
+
+              photoPreview.innerHTML = `<img src="${this._photoUrl}" alt="Preview" style="max-width: 100%">`;
 
               this._stopCamera();
             },
@@ -161,7 +162,6 @@ export default class AddStoryPage {
         });
       } catch (error) {
         console.error("Camera error:", error);
-
         const useFilePicker = confirm(
           "Gagal membuka kamera. Gunakan file picker untuk memilih foto?"
         );
@@ -171,11 +171,12 @@ export default class AddStoryPage {
       }
     });
 
+    // Upload dari file input
     photoInput.addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (file) {
-        this._photoFile = file;
-        this._photoUrl = URL.createObjectURL(file);
+        this._photoFile = file; // simpan asli
+        this._photoUrl = URL.createObjectURL(file); // buat preview
         photoPreview.innerHTML = `<img src="${this._photoUrl}" alt="Preview" style="max-width: 100%">`;
       }
     });
@@ -200,33 +201,24 @@ export default class AddStoryPage {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      if (
-        !this._coordinates ||
-        typeof this._coordinates.lat !== "number" ||
-        typeof this._coordinates.lon !== "number"
-      ) {
-        this.showError("Please select a location on the map first");
-        return;
-      }
-
-      const name = document.getElementById("storyName").value;
       const description = document.getElementById("storyDesc").value;
 
       const storyData = {
-        name,
         description,
-        lat: this._coordinates.lat,
-        lon: this._coordinates.lon,
-        photo: this._photoFile,
+        lat: this._coordinates?.lat,
+        lon: this._coordinates?.lon,
+        photo: this._photoFile, // ✅ ini harus File
       };
 
       if (!navigator.onLine) {
-        await Database.addStoryOffline(storyData);
-        alert("Data disimpan offline dan akan dikirim saat online.");
-        this.showSuccess("Story disimpan offline!");
+        await Database.addStoryOffline({
+          ...storyData,
+          id: Date.now().toString(),
+        });
+        this.showSuccess("✅ Story disimpan offline!");
       } else {
-        await sendStoryToServer(storyData); // Pastikan fungsi ini sudah ada
-        this.showSuccess("Story berhasil dikirim!");
+        await sendStoryToServer(storyData); // ✅ ini otomatis pakai postStory
+        this.showSuccess("✅ Story berhasil dikirim!");
       }
     });
   }
@@ -234,10 +226,16 @@ export default class AddStoryPage {
   showSuccess(message) {
     this.cleanup();
     alert(message);
-    window.location.hash = "#/";
-  }
 
+    if (navigator.onLine) {
+      // kalau online
+      window.location.hash = "#/";
+    } else {
+      // kalau offline
+      window.location.hash = "#/offline";
+    }
+  }
   showError(message) {
-    alert(`Error: ${message} ini kahhs`);
+    alert(`Error: ${message} in add-story-page.js`);
   }
 }

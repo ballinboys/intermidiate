@@ -96,3 +96,22 @@
 .story-action-btn:hover {
   background: #d97706;
 }
+.install-btn {
+  background-color: #ff7b00; /* warna tombol */
+  color: white; /* warna teks */
+  border: none; /* hilangkan border default */
+  padding: 10px 20px; /* ukuran tombol */
+  border-radius: 8px; /* sudut rounded */
+  font-size: 16px; /* teks lebih besar */
+  font-weight: bold; /* biar tebal */
+  cursor: pointer; /* ganti cursor */
+  transition: background 0.3s ease; /* animasi hover */
+}
+
+.install-btn:hover {
+  background-color: #e56f00; /* warna pas hover */
+}
+
+.install-btn:active {
+  transform: scale(0.95); /* efek klik */
+}

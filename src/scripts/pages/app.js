@@ -22,6 +22,7 @@ class App {
     this.#navigationDrawer = navigationDrawer;
 
     this.#setupDrawer();
+    this.#setupOnlineSync();
   }
 
   #setupDrawer() {
@@ -40,6 +41,19 @@ class App {
       this.#navigationDrawer.querySelectorAll("a").forEach((link) => {
         if (link.contains(event.target)) {
           this.#navigationDrawer.classList.remove("open");
+        }
+      });
+    });
+  }
+  #setupOnlineSync() {
+    window.addEventListener("online", async () => {
+      console.log("🔄 Online detected, syncing offline stories...");
+      await Database.syncPendingStories(async (story) => {
+        try {
+          await sendStoryToServer(story);
+          console.log("✅ Synced story:", story.id);
+        } catch (err) {
+          console.error("❌ Failed to sync story:", story.id, err);
         }
       });
     });

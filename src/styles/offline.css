@@ -1,0 +1,54 @@
+.offline-stories {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+.offline-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.offline-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.offline-card h3 {
+  margin: 0 0 0.5rem;
+}
+
+.offline-img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.offline-meta {
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.sync-btn {
+  margin-top: 1rem;
+  padding: 0.6rem 1rem;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.sync-btn:hover {
+  background: #0056b3;
+}
+
+.offline-empty {
+  text-align: center;
+  color: #777;
+  font-style: italic;
+}

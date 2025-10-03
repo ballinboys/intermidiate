@@ -35,32 +35,81 @@ const Database = {
     return (await dbPromise).put(OBJECT_STORE_NAME, story);
   },
   async addStoryOffline(story) {
+    if (!story.id) story.id = Date.now().toString();
+
+    // ✅ kalau ada file → generate photoUrl untuk preview offline
+    if (story.photoFile && story.photoFile instanceof File) {
+      story.photoUrl = URL.createObjectURL(story.photoFile);
+    }
+
     await this.putStory(story);
     await savePendingSync(story);
+    console.log("💾 Story tersimpan offline:", story.id);
   },
+
   async syncPendingStories(syncFunction) {
     const pendingStories = await getPendingSyncStories();
     for (const story of pendingStories) {
       try {
-        await syncFunction(story); // Kirim ke server
+        let fileToUpload = story.photoFile;
+        if (fileToUpload && !(fileToUpload instanceof File)) {
+          fileToUpload = new File([fileToUpload], "offline-photo.jpg", {
+            type: fileToUpload.type || "image/jpeg",
+            lastModified: Date.now(),
+          });
+          story.photoFile = fileToUpload; // update agar konsisten
+        }
+
+        await syncFunction(story);
         await removePendingSync(story.id);
       } catch (err) {
         console.error("Sync failed for story:", story.id, err);
       }
     }
   },
-
+  async getPendingSyncStories() {
+    return await getPendingSyncStories();
+  },
   async getStoryById(id) {
-    if (!id) {
-      throw new Error("`id` is required.");
-    }
+    if (!id) throw new Error("`id` is required.");
     const story = await (await dbPromise).get(OBJECT_STORE_NAME, id);
-    return story || null; // Return null instead of undefined if not found
+
+    // Kalau ada photoFile tapi gak ada photoUrl → bikin sementara
+    if (story?.photoFile && !story.photoUrl) {
+      story.photoUrl = URL.createObjectURL(story.photoFile);
+    }
+    return story || null;
   },
 
   async getAllStories() {
-    return (await dbPromise).getAll(OBJECT_STORE_NAME);
+    const stories = await (await dbPromise).getAll(OBJECT_STORE_NAME);
+
+    return stories.map((s) => {
+      // kalau ada photoFile tapi masih Blob, bungkus jadi File
+      if (s.photoFile && !(s.photoFile instanceof File)) {
+        const fixedFile = new File([s.photoFile], "offline-photo.jpg", {
+          type: s.photoFile.type || "image/jpeg",
+          lastModified: Date.now(),
+        });
+        return {
+          ...s,
+          photoFile: fixedFile,
+          photoUrl: URL.createObjectURL(fixedFile),
+        };
+      }
+
+      // kalau ada photoFile tapi tidak ada photoUrl → buat url baru
+      if (s.photoFile && !s.photoUrl) {
+        return {
+          ...s,
+          photoUrl: URL.createObjectURL(s.photoFile),
+        };
+      }
+
+      return s;
+    });
   },
+
   async searchStories(keyword) {
     const stories = await this.getAllStories();
     if (!keyword) return stories;
