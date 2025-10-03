@@ -22,13 +22,13 @@
 
   "screenshots": [
     {
-      "src": "/home-portrait.png",
+      "src": "/screenshots/home-portrait.png",
       "sizes": "720x1280",
       "type": "image/png",
       "form_factor": "wide"
     },
     {
-      "src": "/login-page.png",
+      "src": "/screenshots/login-page.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide"
