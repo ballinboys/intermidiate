@@ -17,7 +17,7 @@
 
   "screenshots": [
     {
-      "src": "/screenshots/home-portrait.png",
+      "src": "/screenshots/home-potrait.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide"
