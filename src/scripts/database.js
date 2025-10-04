@@ -51,17 +51,33 @@ const Database = {
     try {
       const db = await dbPromise;
       const tx = db.transaction(OBJECT_STORE_NAME, "readwrite");
-      await tx.store.clear();
+      const store = tx.store;
 
-      for (const s of stories) {
-        if (s.id) {
-          const existing = await tx.store.get(s.id);
-          const merged = { ...existing, ...s };
-          await tx.store.put(merged);
-        }
-      }
+      // Ambil semua data lama di cache
+      const existingStories = await store.getAll();
+      const newIds = stories.map((s) => s.id);
+
+      // 🔹 Simpan data baru (merge liked)
+      await Promise.all(
+        stories.map(async (s) => {
+          const prev = existingStories.find((e) => e.id === s.id);
+          const merged = { ...s, liked: prev?.liked ?? false };
+          await store.put(merged);
+        })
+      );
+
+      // 🔹 Hapus yang sudah tidak ada di server
+      await Promise.all(
+        existingStories.map(async (old) => {
+          if (!newIds.includes(old.id)) {
+            await store.delete(old.id);
+            console.log(`🧹 Deleted old story: ${old.id}`);
+          }
+        })
+      );
+
       await tx.done;
-      console.log(`🧩 Cached ${stories.length} stories ke IndexedDB`);
+      console.log(`✅ Synced ${stories.length} stories ke IndexedDB`);
     } catch (err) {
       console.warn("⚠️ Gagal cache stories:", err);
     }
