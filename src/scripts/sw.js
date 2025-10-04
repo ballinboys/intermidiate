@@ -70,18 +70,22 @@ registerRoute(
 
 // ✅ Push notification
 self.addEventListener("push", (event) => {
-  const data = event.data?.json() || {
-    title: "Default",
-    options: {
-      body: "No content",
-      icon: "/icons/icon-192x192.png",
-      actions: [
-        { action: "open_detail", title: "Lihat Detail" },
-        { action: "dismiss", title: "Tutup" },
-      ],
-    },
-  };
-
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = {
+      title: "Pesan Masuk",
+      options: {
+        body: event.data ? event.data.text() : "No content",
+        icon: "/icons/icon-192x192.png",
+        actions: [
+          { action: "open_detail", title: "Lihat Detail" },
+          { action: "dismiss", title: "Tutup" },
+        ],
+      },
+    };
+  }
   event.waitUntil(self.registration.showNotification(data.title, data.options));
 });
 
@@ -93,3 +97,5 @@ self.addEventListener("notificationclick", (event) => {
     event.waitUntil(clients.openWindow("/"));
   }
 });
+self.skipWaiting();
+self.clients.claim();

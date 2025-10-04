@@ -7,12 +7,31 @@ const OBJECT_STORE_NAME = "saved-stories";
 const SYNC_STORE_NAME = "pending-sync";
 
 const dbPromise = openDB(DATABASE_NAME, DATABASE_VERSION, {
-  upgrade: (database) => {
-    database.createObjectStore(OBJECT_STORE_NAME, { keyPath: "id" });
-    // Tambahkan store untuk data pending sync
+  upgrade(database) {
+    // Cek dulu sebelum bikin store baru
+    if (!database.objectStoreNames.contains(OBJECT_STORE_NAME)) {
+      database.createObjectStore(OBJECT_STORE_NAME, { keyPath: "id" });
+      console.log("✅ Store created:", OBJECT_STORE_NAME);
+    }
+
     if (!database.objectStoreNames.contains(SYNC_STORE_NAME)) {
       database.createObjectStore(SYNC_STORE_NAME, { keyPath: "id" });
+      console.log("✅ Store created:", SYNC_STORE_NAME);
     }
+
+    // 🧹 Opsional tapi direkomendasikan:
+    // cek isi tiap store dan validasi tidak ada sisa data korup
+    const existingStores = Array.from(database.objectStoreNames);
+    existingStores.forEach((storeName) => {
+      const store = database
+        .transaction(storeName, "readonly")
+        .objectStore(storeName);
+      store.getAll().onsuccess = (event) => {
+        console.log(
+          `ℹ️ ${storeName} contains ${event.target.result.length} items after upgrade`
+        );
+      };
+    });
   },
 });
 
@@ -32,6 +51,8 @@ const Database = {
     try {
       const db = await dbPromise;
       const tx = db.transaction(OBJECT_STORE_NAME, "readwrite");
+      await tx.store.clear();
+
       for (const s of stories) {
         if (s.id) {
           const existing = await tx.store.get(s.id);
