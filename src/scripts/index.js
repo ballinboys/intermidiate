@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     },
   });
   window.addEventListener("online", async () => {
+    console.log("🌐 Online kembali — mulai sinkronisasi...");
     await Database.syncPendingStories(sendStoryToServer);
   });
   window.addEventListener("hashchange", async () => {
@@ -53,7 +54,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     deferredPrompt = e;
 
     if (installBtn) {
-      installBtn.style.display = "block"; // munculin tombol install
+      installBtn.classList.remove("hidden");
 
       installBtn.addEventListener("click", async () => {
         deferredPrompt.prompt();

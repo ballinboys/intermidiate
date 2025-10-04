@@ -5,47 +5,43 @@ export default class OfflinePagePresenter {
     this._view = view;
   }
 
-  // dipanggil di OfflinePage.afterRender()
-  async loadOfflineStories() {
+  /**
+   * Load stories yang di-like dari IndexedDB
+   */
+  async loadLikedStories() {
     try {
-      const stories = await Database.getPendingSyncStories();
-
+      const stories = await Database.getLikedStories();
       if (!stories || stories.length === 0) {
-        this._view.showEmpty("Tidak ada story offline ✨");
+        this._view.showEmpty("Belum ada cerita favorit ❤️");
       } else {
         this._view.showStories(stories);
+
+        // tambahkan handler setelah render
+        this._setupUnlikeHandlers();
       }
     } catch (err) {
-      console.error("❌ Gagal load offline stories:", err);
-      this._view.showError("Tidak bisa memuat story offline");
+      console.error("❌ Gagal load liked stories:", err);
+      this._view.showError("Tidak bisa memuat cerita favorit");
     }
   }
 
-  // dipanggil ketika klik tombol Sync
-  async syncStories(syncFn) {
-    try {
-      const pendingStories = await Database.getPendingSyncStories();
+  /**
+   * Setup event handler untuk Unlike
+   */
+  _setupUnlikeHandlers() {
+    const unlikeButtons = document.querySelectorAll(".btn-unlike");
 
-      if (!pendingStories.length) {
-        this._view.showEmpty("Tidak ada data untuk disinkronkan");
-        return;
-      }
-
-      for (const story of pendingStories) {
+    unlikeButtons.forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const storyId = btn.dataset.id;
         try {
-          await syncFn(story);
-          await Database.removePendingSync(story.id);
+          await Database.toggleLike(storyId); // unlike
+          await this.loadLikedStories(); // refresh list
         } catch (err) {
-          console.error("❌ Gagal sync story:", story.id, err);
-          this._view.showError(`Gagal sync story: ${story.description}`);
-          return;
+          console.error("❌ Gagal unlike:", err);
+          this._view.showError("Tidak bisa menghapus dari favorit");
         }
-      }
-
-      this._view.showSuccess("✅ Semua story offline berhasil disinkronkan!");
-    } catch (err) {
-      console.error("❌ Error saat syncStories:", err);
-      this._view.showError("Terjadi error saat sinkronisasi");
-    }
+      });
+    });
   }
 }

@@ -1,54 +1,59 @@
-.offline-stories {
-  max-width: 800px;
+.liked-stories {
+  max-width: 1200px;
   margin: 2rem auto;
   padding: 1rem;
 }
 
-.offline-list {
+.story-list {
   display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
 }
 
-.offline-card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 1rem;
+.story-card {
   background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.offline-card h3 {
-  margin: 0 0 0.5rem;
-}
-
-.offline-img {
-  max-width: 100%;
+.story-card img.story-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
   border-radius: 6px;
   margin-bottom: 0.5rem;
 }
 
-.offline-meta {
-  font-size: 0.85rem;
-  color: #555;
+.story-card h3 {
+  font-size: 1.2rem;
+  margin: 0.5rem 0;
 }
 
-.sync-btn {
-  margin-top: 1rem;
-  padding: 0.6rem 1rem;
-  background: #007bff;
-  color: #fff;
+.story-card p {
+  font-size: 0.9rem;
+  margin: 0.2rem 0;
+  color: #444;
+}
+
+.story-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+.story-actions a,
+.story-actions button {
   border: none;
-  border-radius: 6px;
+  background: #f58220;
+  color: white;
+  padding: 0.5rem 0.8rem;
+  border-radius: 5px;
   cursor: pointer;
-}
-
-.sync-btn:hover {
-  background: #0056b3;
-}
-
-.offline-empty {
-  text-align: center;
-  color: #777;
-  font-style: italic;
+  font-size: 0.85rem;
+  transition: background 0.2s;
 }

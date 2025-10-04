@@ -211,13 +211,25 @@ export default class AddStoryPage {
       };
 
       if (!navigator.onLine) {
+        // ✅ simpan offline ke IndexedDB
         await Database.addStoryOffline({
           ...storyData,
           id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+          photoFile: this._photoFile, // simpan file aslinya
         });
-        this.showSuccess("✅ Story disimpan offline!");
+
+        this.showSuccess(
+          "📦 Story disimpan offline! Akan otomatis dikirim saat online."
+        );
+
+        // Tambahan opsional biar user tahu kalau nanti disinkron
+        window.addEventListener("online", async () => {
+          await Database.syncPendingStories(sendStoryToServer);
+        });
       } else {
-        await sendStoryToServer(storyData); // ✅ ini otomatis pakai postStory
+        // ✅ kirim langsung ke server kalau online
+        await sendStoryToServer(storyData);
         this.showSuccess("✅ Story berhasil dikirim!");
       }
     });

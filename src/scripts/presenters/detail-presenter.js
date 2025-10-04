@@ -11,21 +11,22 @@ export default class DetailPresenter {
       let story;
 
       if (navigator.onLine) {
-        // coba ambil dari API
         const response = await getStory(id);
-
-        if (response.error) {
-          throw new Error(response.message);
-        }
+        if (response.error) throw new Error(response.message);
 
         story = response.story;
 
-        // simpan ke IndexedDB supaya bisa diakses offline nanti
+        // merge state liked/saved dari DB lokal
+        const local = await Database.getStoryById(story.id);
+        if (local) {
+          story.liked = local.liked || false;
+          story.saved = local.saved || false;
+        }
+
         if (story && story.id) {
           await Database.putStory(story);
         }
       } else {
-        // offline → fallback IndexedDB
         story = await Database.getStoryById(id);
       }
 
@@ -39,13 +40,47 @@ export default class DetailPresenter {
     } catch (error) {
       console.error("DetailPresenter error:", error);
 
-      // fallback terakhir ke IndexedDB
       const offlineStory = await Database.getStoryById(id);
       if (offlineStory) {
         this._view.showStory(offlineStory);
       } else {
         this._view.showError("Gagal memuat detail story.");
       }
+    }
+  }
+
+  // ✅ toggle like
+  async toggleLike(id) {
+    try {
+      const updatedStory = await Database.toggleLike(id);
+      this._view.showStory(updatedStory); // refresh UI detail
+      return updatedStory;
+    } catch (err) {
+      console.error("❌ Gagal toggle like:", err);
+      throw err;
+    }
+  }
+
+  // ✅ toggle save
+  async toggleSave(story) {
+    try {
+      const alreadySaved = await Database.isStorySaved(story.id);
+      if (alreadySaved) {
+        await Database.removeSavedStory(story.id);
+        story.saved = false;
+      } else {
+        await Database.saveStory(story);
+        story.saved = true;
+      }
+
+      // update di DB utama juga supaya konsisten
+      await Database.putStory(story);
+
+      this._view.showStory(story); // refresh UI detail
+      return story;
+    } catch (err) {
+      console.error("❌ Gagal toggle save:", err);
+      throw err;
     }
   }
 }

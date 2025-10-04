@@ -28,12 +28,50 @@ async function removePendingSync(id) {
   return (await dbPromise).delete(SYNC_STORE_NAME, id);
 }
 const Database = {
-  async putStory(story) {
-    if (!Object.hasOwn(story, "id")) {
-      throw new Error("`id` is required to save.");
+  async cacheStories(stories) {
+    try {
+      const db = await dbPromise;
+      const tx = db.transaction(OBJECT_STORE_NAME, "readwrite");
+      for (const s of stories) {
+        if (s.id) {
+          const existing = await tx.store.get(s.id);
+          const merged = { ...existing, ...s };
+          await tx.store.put(merged);
+        }
+      }
+      await tx.done;
+      console.log(`🧩 Cached ${stories.length} stories ke IndexedDB`);
+    } catch (err) {
+      console.warn("⚠️ Gagal cache stories:", err);
     }
-    return (await dbPromise).put(OBJECT_STORE_NAME, story);
   },
+
+  async getCachedStories() {
+    try {
+      const stories = await (await dbPromise).getAll(OBJECT_STORE_NAME);
+      return stories || [];
+    } catch (err) {
+      console.warn("⚠️ Gagal load cached stories:", err);
+      return [];
+    }
+  },
+  async putStory(story) {
+    if (!story || !story.id) {
+      console.warn("🚫 Invalid story data, auto-generating id:", story);
+      story.id = Date.now().toString();
+    }
+
+    const db = await dbPromise;
+    try {
+      await db.put(OBJECT_STORE_NAME, story);
+      console.log("✅ Story saved:", story.id);
+      return story;
+    } catch (err) {
+      console.error("❌ Failed to save story:", err, story);
+      throw err;
+    }
+  },
+
   async addStoryOffline(story) {
     if (!story.id) story.id = Date.now().toString();
 
@@ -49,21 +87,27 @@ const Database = {
 
   async syncPendingStories(syncFunction) {
     const pendingStories = await getPendingSyncStories();
+    if (pendingStories.length === 0) return;
+
     for (const story of pendingStories) {
       try {
         let fileToUpload = story.photoFile;
         if (fileToUpload && !(fileToUpload instanceof File)) {
-          fileToUpload = new File([fileToUpload], "offline-photo.jpg", {
-            type: fileToUpload.type || "image/jpeg",
-            lastModified: Date.now(),
+          const blob = new Blob([fileToUpload], { type: "image/jpeg" });
+          fileToUpload = new File([blob], "offline-photo.jpg", {
+            type: "image/jpeg",
           });
-          story.photoFile = fileToUpload; // update agar konsisten
         }
-
+        story.photoFile = fileToUpload;
         await syncFunction(story);
         await removePendingSync(story.id);
+        alert(
+          `✅ Story "${
+            story.description?.slice(0, 25) || "Tanpa Judul"
+          }" tersinkron ke server`
+        );
       } catch (err) {
-        console.error("Sync failed for story:", story.id, err);
+        console.error("❌ Gagal sync story:", story.id, err);
       }
     }
   },
@@ -72,12 +116,18 @@ const Database = {
   },
   async getStoryById(id) {
     if (!id) throw new Error("`id` is required.");
-    const story = await (await dbPromise).get(OBJECT_STORE_NAME, id);
+    const key = String(id).trim();
+    const story = await (await dbPromise).get(OBJECT_STORE_NAME, key);
 
-    // Kalau ada photoFile tapi gak ada photoUrl → bikin sementara
+    // auto generate photo URL jika belum ada
     if (story?.photoFile && !story.photoUrl) {
-      story.photoUrl = URL.createObjectURL(story.photoFile);
+      try {
+        story.photoUrl = URL.createObjectURL(story.photoFile);
+      } catch {
+        story.photoUrl = "/images/no-image.png";
+      }
     }
+
     return story || null;
   },
 
@@ -137,31 +187,60 @@ const Database = {
     if (!Array.isArray(stories)) {
       throw new Error("Expected an array of stories");
     }
+
     const tx = (await dbPromise).transaction(OBJECT_STORE_NAME, "readwrite");
-    const promises = stories.map((story) => {
+
+    const promises = stories.map(async (story) => {
       if (!story.id) throw new Error("Each story must have an id");
-      return tx.store.put(story);
+
+      const existing = await tx.store.get(story.id);
+
+      const mergedStory = {
+        ...existing, // data lama
+        ...story, // overwrite dengan data baru
+        liked: existing?.liked ?? false, // preserve status like
+      };
+
+      return tx.store.put(mergedStory);
     });
-    await Promise.all([...promises, tx.done]);
+
+    await Promise.all(promises);
+    await tx.done;
+
     return stories.length;
   },
 
-  async toggleLike(storyId) {
+  async toggleLike(storyId, fullStory = null) {
     try {
-      const story = await this.getStoryById(storyId);
+      const id = String(storyId).trim();
+      let story = await this.getStoryById(id);
+
+      // 🔹 Kalau belum pernah tersimpan, buat entry baru
       if (!story) {
-        // Create a new entry if story doesn't exist
-        const newStory = { id: storyId, liked: true };
+        if (!fullStory)
+          throw new Error("Full story data wajib saat pertama kali Like");
+
+        // fallback default biar gak null
+        const newStory = {
+          id,
+          name: fullStory.name || "Anonim",
+          description: fullStory.description || "",
+          createdAt: fullStory.createdAt || new Date().toISOString(),
+          lat: fullStory.lat ?? null,
+          lon: fullStory.lon ?? null,
+          liked: true,
+          photoUrl: fullStory.photoUrl || "/images/no-image.png",
+        };
+
         await this.putStory(newStory);
+        console.log("💾 Created new liked story:", newStory);
         return newStory;
       }
 
-      const updatedStory = {
-        ...story,
-        liked: !story.liked,
-      };
-
+      // 🔹 Kalau sudah ada, toggle status like
+      const updatedStory = { ...story, liked: !story.liked };
       await this.putStory(updatedStory);
+      console.log("🔁 Updated liked state:", updatedStory);
       return updatedStory;
     } catch (error) {
       console.error("Error in toggleLike:", error);

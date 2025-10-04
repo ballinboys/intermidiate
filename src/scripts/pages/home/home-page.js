@@ -35,6 +35,33 @@ export default class HomePage {
       searchContainer,
       this._storiesContainer
     );
+    // showStories(stories)
+    document.querySelectorAll(".like-button").forEach((button) => {
+      button.addEventListener("click", async (e) => {
+        const buttonEl = e.currentTarget;
+        const storyId = buttonEl.dataset.id;
+        const originalContent = buttonEl.innerHTML;
+
+        // cari story lengkap dari list
+        const story = stories.find((s) => String(s.id) === String(storyId));
+        if (!story) return;
+
+        try {
+          buttonEl.disabled = true;
+          // 🔥 kirim story lengkap agar tersimpan di IndexedDB
+          const updatedStory = await Database.toggleLike(storyId, story);
+          buttonEl.innerHTML = updatedStory.liked ? "❤️" : "🤍";
+        } catch (error) {
+          console.error("UI error in like button:", error);
+          buttonEl.innerHTML = originalContent;
+          this.showError(
+            "Could not update like. Please refresh and try again."
+          );
+        } finally {
+          buttonEl.disabled = false;
+        }
+      });
+    });
 
     document.getElementById("searchBtn").addEventListener("click", async () => {
       const query = document.getElementById("searchInput").value.trim();

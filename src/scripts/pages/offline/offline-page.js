@@ -1,5 +1,5 @@
 import OfflinePagePresenter from "../../presenters/offline-page-presenter";
-import { sendStoryToServer } from "../../data/api";
+import Database from "../../database"; // jangan lupa import Database
 
 export default class OfflinePage {
   constructor() {
@@ -8,78 +8,78 @@ export default class OfflinePage {
 
   async render() {
     return `
-      <section class="offline-stories">
-        <h2>📦 Daftar Story Offline</h2>
-        <div id="offlineStories" class="offline-list"></div>
-        <button id="syncBtn" class="sync-btn">🔄 Sync All</button>
+      <section class="liked-stories">
+        <h2>💖 Cerita Favorit</h2>
+        <p id="emptyMessage">Cerita yang Anda simpan sebagai favorit akan muncul di sini.</p>
+        <div id="likedStories" class="story-list"></div>
       </section>
     `;
   }
 
   async afterRender() {
-    await this._presenter.loadOfflineStories();
-
-    document.getElementById("syncBtn").addEventListener("click", async () => {
-      await this._presenter.syncStories(async (story) => {
-        // siapkan formData agar bisa dikirim seperti request normal
-        const formData = new FormData();
-        formData.append("description", story.description || "Tanpa Judul");
-        formData.append("lat", story.lat ?? 0);
-        formData.append("lon", story.lon ?? 0);
-
-        // kalau ada foto asli (blob/File)
-        if (story.photoFile) {
-          formData.append("photo", story.photoFile);
-        }
-
-        await sendStoryToServer(formData);
-      });
-    });
+    await this._presenter.loadLikedStories();
   }
 
-  // 👉 view methods
+  // 👉 View methods
   showStories(stories) {
-    const container = document.getElementById("offlineStories");
-    if (!stories.length) {
-      this.showEmpty("Tidak ada story offline ✨");
-      return;
+    const container = document.getElementById("likedStories");
+    const emptyMessage = document.getElementById("emptyMessage");
+
+    // ✅ hide pesan kalau ada story
+    if (stories.length > 0) {
+      emptyMessage.style.display = "none";
+    } else {
+      emptyMessage.style.display = "block";
     }
 
     container.innerHTML = stories
       .map(
         (s) => `
-    <div class="offline-card">
-      <h3>${s.description || "Tanpa Judul"}</h3>
-      ${
-        s.photoUrl
-          ? `<img src="${s.photoUrl}" class="offline-img" alt="preview"/>`
-          : ""
-      }
-      <div class="offline-meta">
-        <small><b>Lat:</b> ${s.lat}, <b>Lon:</b> ${s.lon}</small><br/>
-        <small><b>Created:</b> ${
-          s.createdAt ? new Date(s.createdAt).toLocaleString() : "Unknown"
-        }</small>
-      </div>
-    </div>
-  `
+        <div class="story-card">
+          <h3>${s.name || "Tanpa Judul"}</h3>
+          ${
+            s.photoUrl
+              ? `<img src="${s.photoUrl}" alt="Story image" class="story-img"/>`
+              : `<p>📷 Tidak ada gambar</p>`
+          }
+          <p><b>Lat:</b> ${s.lat ?? "?"}, <b>Lon:</b> ${s.lon ?? "?"}</p>
+          <p><b>Created:</b> ${
+            s.createdAt ? new Date(s.createdAt).toLocaleString() : "Unknown"
+          }</p>
+          <p>${s.description || ""}</p>
+
+          <div class="story-actions">
+            <a href="/#/story/${s.id}" class="btn-detail">➡ Selengkapnya</a>
+            <button class="btn-unlike" data-id="${s.id}">💔 Unlike</button>
+          </div>
+        </div>
+      `
       )
       .join("");
+
+    // unlike listener
+    container.querySelectorAll(".btn-unlike").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        const id = e.currentTarget.dataset.id;
+        await this._presenter.toggleLike(id);
+      });
+    });
+
+    // save listener
   }
 
   showEmpty(message) {
-    document.getElementById(
-      "offlineStories"
-    ).innerHTML = `<p class="offline-empty">${message}</p>`;
-  }
+    const container = document.getElementById("likedStories");
+    const emptyMessage = document.getElementById("emptyMessage");
 
-  showSuccess(message) {
-    alert(message);
-    // refresh list setelah berhasil sync
-    this._presenter.loadOfflineStories();
+    container.innerHTML = "";
+    emptyMessage.style.display = "block";
+    emptyMessage.textContent = message;
   }
 
   showError(message) {
-    alert(`❌ ${message}`);
+    document.getElementById(
+      "likedStories"
+    ).innerHTML = `<p class="error">${message}</p>`;
   }
 }

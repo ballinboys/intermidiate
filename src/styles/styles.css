@@ -272,28 +272,21 @@ body:not(.logged-in) .nav-login {
   top: 0;
 }
 
-/* Tombol Install App */
-.install-btn {
-  background-color: #0d47a1; /* biru */
+#installBtn {
+  background-color: #0d47a1;
   color: white;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: bold;
+  padding: 10px 20px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
+  font-size: 16px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: background-color 0.2s ease-in-out;
 }
 
-.install-btn:hover {
-  background-color: #1565c0; /* lebih terang pas hover */
+#installBtn:hover {
+  background-color: #1565c0;
 }
 
-.install-btn:active {
-  background-color: #0b3c91; /* lebih gelap pas ditekan */
-}
-
-.install-btn:disabled {
-  background-color: #b0bec5;
-  cursor: not-allowed;
+.hidden {
+  display: none !important;
 }

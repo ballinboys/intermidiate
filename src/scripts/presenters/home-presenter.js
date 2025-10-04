@@ -14,6 +14,7 @@ export default class HomePresenter {
       if (!this._authPresenter.authCheck()) return;
 
       const { listStory } = await getStories();
+      await this._db.cacheStories(listStory); // ✅ simpan cache terbaru
 
       // Check each story's like status from IndexedDB
       const storiesWithLikes = await Promise.all(
@@ -35,7 +36,13 @@ export default class HomePresenter {
 
       this._view.showStories(storiesWithLikes);
     } catch (error) {
-      this._view.showError("Failed to load stories. Please try again later.");
+      console.warn("⚠️ Offline mode: memuat cache lokal...");
+      const cachedStories = await this._db.getCachedStories();
+      if (cachedStories.length > 0) {
+        this._view.showStories(cachedStories);
+      } else {
+        this._view.showError("Tidak ada cache tersedia untuk ditampilkan.");
+      }
     }
   }
 
