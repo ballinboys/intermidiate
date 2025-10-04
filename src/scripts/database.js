@@ -6,35 +6,26 @@ const OBJECT_STORE_NAME = "saved-stories";
 
 const SYNC_STORE_NAME = "pending-sync";
 
-const dbPromise = openDB(DATABASE_NAME, DATABASE_VERSION, {
-  upgrade(database) {
-    // Cek dulu sebelum bikin store baru
-    if (!database.objectStoreNames.contains(OBJECT_STORE_NAME)) {
-      database.createObjectStore(OBJECT_STORE_NAME, { keyPath: "id" });
-      console.log("✅ Store created:", OBJECT_STORE_NAME);
-    }
+let dbPromise;
+try {
+  dbPromise = openDB(DATABASE_NAME, DATABASE_VERSION, {
+    upgrade(db) {
+      // Cek dan buat store baru
+      if (!db.objectStoreNames.contains(OBJECT_STORE_NAME)) {
+        db.createObjectStore(OBJECT_STORE_NAME, { keyPath: "id" });
+        console.log("✅ Store created:", OBJECT_STORE_NAME);
+      }
 
-    if (!database.objectStoreNames.contains(SYNC_STORE_NAME)) {
-      database.createObjectStore(SYNC_STORE_NAME, { keyPath: "id" });
-      console.log("✅ Store created:", SYNC_STORE_NAME);
-    }
-
-    // 🧹 Opsional tapi direkomendasikan:
-    // cek isi tiap store dan validasi tidak ada sisa data korup
-    const existingStores = Array.from(database.objectStoreNames);
-    existingStores.forEach((storeName) => {
-      const store = database
-        .transaction(storeName, "readonly")
-        .objectStore(storeName);
-      store.getAll().onsuccess = (event) => {
-        console.log(
-          `ℹ️ ${storeName} contains ${event.target.result.length} items after upgrade`
-        );
-      };
-    });
-  },
-});
-
+      if (!db.objectStoreNames.contains(SYNC_STORE_NAME)) {
+        db.createObjectStore(SYNC_STORE_NAME, { keyPath: "id" });
+        console.log("✅ Store created:", SYNC_STORE_NAME);
+      }
+    },
+  });
+} catch (err) {
+  console.error("❌ IndexedDB gagal diakses:", err);
+  alert("IndexedDB tidak dapat dibuka. Coba refresh atau hapus cache browser.");
+}
 async function savePendingSync(story) {
   return (await dbPromise).put(SYNC_STORE_NAME, story);
 }
@@ -51,25 +42,30 @@ const Database = {
     try {
       const db = await dbPromise;
       const tx = db.transaction(OBJECT_STORE_NAME, "readwrite");
+      const store = tx.store;
 
-      // 🔹 Ambil semua data lama di cache
-      const existingStories = await this.getAllStories();
+      // Ambil data lama langsung dari transaction yang sama
+      const existingStories = await store.getAll();
       const newIds = stories.map((s) => s.id);
 
-      // 🔹 Hapus story lama yang tidak ada di server
-      for (const old of existingStories) {
-        if (!newIds.includes(old.id)) {
-          await tx.store.delete(old.id);
-          console.log(`🧹 Deleted old story: ${old.id}`);
-        }
-      }
+      // 🧹 Hapus story lama yang sudah tidak ada di server
+      await Promise.all(
+        existingStories.map(async (old) => {
+          if (!newIds.includes(old.id)) {
+            await store.delete(old.id);
+            console.log(`🧹 Deleted old story: ${old.id}`);
+          }
+        })
+      );
 
-      // 🔹 Simpan story baru + merge status liked
-      for (const s of stories) {
-        const prev = existingStories.find((e) => e.id === s.id);
-        const merged = { ...s, liked: prev?.liked ?? false };
-        await tx.store.put(merged);
-      }
+      // 💾 Tambahkan story baru dan merge status liked
+      await Promise.all(
+        stories.map(async (s) => {
+          const prev = existingStories.find((e) => e.id === s.id);
+          const merged = { ...s, liked: prev?.liked ?? false };
+          await store.put(merged);
+        })
+      );
 
       await tx.done;
       console.log(`🧩 Cached ${stories.length} stories ke IndexedDB`);

@@ -61,7 +61,6 @@ export default class OfflinePage {
     container.querySelectorAll(".btn-unlike").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         const id = e.currentTarget.dataset.id;
-        await this._presenter.toggleLike(id);
       });
     });
 
