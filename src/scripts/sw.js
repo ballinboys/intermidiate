@@ -1,79 +1,70 @@
-import { precacheAndRoute } from "workbox-precaching";
+import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
 import {
   NetworkFirst,
   StaleWhileRevalidate,
   CacheFirst,
 } from "workbox-strategies";
-
 import CONFIG from "./config";
 
 console.log("Service worker module loaded");
 
-// ✅ precache semua file hasil build
+// 🧹 Bersihkan cache lama
+cleanupOutdatedCaches();
+
+// ✅ Precache semua file hasil build
 precacheAndRoute(self.__WB_MANIFEST);
 
-// ✅ Cache untuk file static lokal (ikon marker, shadow, css, dll)
+// ✅ Cache untuk file static lokal
 registerRoute(
   ({ request }) =>
-    request.destination === "style" ||
-    request.destination === "script" ||
-    request.destination === "worker" ||
-    request.destination === "image", // termasuk marker-icon.png
-  new CacheFirst({
-    cacheName: "static-assets",
-  })
+    ["style", "script", "worker", "image"].includes(request.destination),
+  new CacheFirst({ cacheName: "static-assets" })
 );
-// cache openstreetmap
+
+// ✅ Cache OpenStreetMap images
 registerRoute(
   ({ request }) =>
     request.destination === "image" && request.url.includes("/images/"),
-  new CacheFirst({
-    cacheName: "static-images",
-  })
+  new CacheFirst({ cacheName: "static-images" })
 );
-// ✅ Cache API non-image (misal JSON, halaman HTML dynamic)
+
+// ✅ Cache API non-image lokal
 registerRoute(
   ({ request, url }) =>
-    url.origin === self.location.origin && request.destination !== "image",
+    url.origin === self.location.origin &&
+    request.destination !== "image" &&
+    !url.protocol.startsWith("blob") &&
+    !url.protocol.startsWith("file"),
   new NetworkFirst({ cacheName: "mystory-api" })
 );
 
-// ✅ Cache API image dari BASE_URL (foto story)
-registerRoute(
-  ({ request, url }) => {
-    const baseUrl = new URL(CONFIG.BASE_URL);
-    return baseUrl.origin === url.origin && request.destination === "image";
-  },
-  new StaleWhileRevalidate({
-    cacheName: "mystory-api-images",
-  })
-);
+// ✅ Cache API image Dicoding
+registerRoute(({ request, url }) => {
+  const baseUrl = new URL(CONFIG.BASE_URL);
+  return baseUrl.origin === url.origin && request.destination === "image";
+}, new StaleWhileRevalidate({ cacheName: "mystory-api-images" }));
 
-// ✅ Cache Map tiles (OpenStreetMap / MapTiler)
+// ✅ Cache Map tiles
 registerRoute(
   ({ url }) =>
     url.origin.includes("maptiler") ||
     url.origin.includes("tile.openstreetmap.org"),
-  new CacheFirst({
-    cacheName: "map-tiles",
-  })
+  new CacheFirst({ cacheName: "map-tiles" })
 );
 
-// ✅ Cache untuk API Dicoding
+// ✅ Cache Dicoding API umum
 registerRoute(
   ({ url }) => url.origin === "https://story-api.dicoding.dev",
-  new NetworkFirst({
-    cacheName: "dicoding-story-api",
-  })
+  new NetworkFirst({ cacheName: "dicoding-story-api" })
 );
 
-// ✅ Push notification
+// ✅ Push notifications
 self.addEventListener("push", (event) => {
   let data = {};
   try {
     data = event.data ? event.data.json() : {};
-  } catch (e) {
+  } catch {
     data = {
       title: "Pesan Masuk",
       options: {
@@ -91,11 +82,21 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  if (event.action === "open_detail") {
-    event.waitUntil(clients.openWindow("/#/detail-page"));
-  } else {
-    event.waitUntil(clients.openWindow("/"));
-  }
+  const targetUrl = event.action === "open_detail" ? "/#/detail-page" : "/";
+  event.waitUntil(clients.openWindow(targetUrl));
 });
-self.skipWaiting();
-self.clients.claim();
+
+// 🧩 Tambahkan event lifecycle yang benar
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
+  console.log("🛠️ SW diinstall");
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      await self.clients.claim();
+      console.log("✅ SW aktif dan kontrol diambil");
+    })()
+  );
+});

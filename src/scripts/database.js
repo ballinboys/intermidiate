@@ -51,33 +51,28 @@ const Database = {
     try {
       const db = await dbPromise;
       const tx = db.transaction(OBJECT_STORE_NAME, "readwrite");
-      const store = tx.store;
 
-      // Ambil semua data lama di cache
-      const existingStories = await store.getAll();
+      // 🔹 Ambil semua data lama di cache
+      const existingStories = await this.getAllStories();
       const newIds = stories.map((s) => s.id);
 
-      // 🔹 Simpan data baru (merge liked)
-      await Promise.all(
-        stories.map(async (s) => {
-          const prev = existingStories.find((e) => e.id === s.id);
-          const merged = { ...s, liked: prev?.liked ?? false };
-          await store.put(merged);
-        })
-      );
+      // 🔹 Hapus story lama yang tidak ada di server
+      for (const old of existingStories) {
+        if (!newIds.includes(old.id)) {
+          await tx.store.delete(old.id);
+          console.log(`🧹 Deleted old story: ${old.id}`);
+        }
+      }
 
-      // 🔹 Hapus yang sudah tidak ada di server
-      await Promise.all(
-        existingStories.map(async (old) => {
-          if (!newIds.includes(old.id)) {
-            await store.delete(old.id);
-            console.log(`🧹 Deleted old story: ${old.id}`);
-          }
-        })
-      );
+      // 🔹 Simpan story baru + merge status liked
+      for (const s of stories) {
+        const prev = existingStories.find((e) => e.id === s.id);
+        const merged = { ...s, liked: prev?.liked ?? false };
+        await tx.store.put(merged);
+      }
 
       await tx.done;
-      console.log(`✅ Synced ${stories.length} stories ke IndexedDB`);
+      console.log(`🧩 Cached ${stories.length} stories ke IndexedDB`);
     } catch (err) {
       console.warn("⚠️ Gagal cache stories:", err);
     }
